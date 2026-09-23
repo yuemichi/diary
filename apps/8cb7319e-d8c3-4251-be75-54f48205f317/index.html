@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three.js Water Ecosystem (Splash Effects)</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: sans-serif; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    
+    #underwater-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(to bottom, rgba(0, 100, 170, 0) 0%, rgba(0, 50, 100, 0.4) 100%);
+      pointer-events: none; opacity: 0; transition: opacity 0.1s; 
+    }
+
+    #start-screen {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(0, 20, 40, 0.9);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      color: white; z-index: 10;
+    }
+    #start-btn {
+      padding: 15px 40px; font-size: 24px; font-weight: bold; cursor: pointer;
+      background-color: #00aaff; color: white; border: none; border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+    #start-btn:hover { background-color: #0088cc; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="start-screen">
+    <h2>海中探索へようこそ</h2>
+    <p>※音が出ます。マウスドラッグでカメラを動かせます。</p>
+    <button id="start-btn">START</button>
+  </div>
+
+  <div id="canvas-container"></div>
+  <div id="underwater-overlay"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+    // ==========================================
+    // 1. パラメータ設定
+    // ==========================================
+    const params = {
+      isPaused: false,
+      waveScale: 1.0,         
+      waveSpeed: 1.0,         
+      waterClarity: 20.0,     
+      waterFogDensity: 0.05,  
+      waterColor: 0x00aaff,   
+      sunIntensity: 3.5,
+      volume: 0.5
+    };
+
+    let audioCtx, waveFilter, waveGain, windFilter, windGain, masterGain;
+
+    const gui = new GUI({ title: '⚙️ 設定パネル' });
+    const sysFolder = gui.addFolder('システム・音響');
+    sysFolder.add(params, 'isPaused').name('⏸ 一時停止').onChange(v => {
+      if (masterGain && audioCtx) {
+        masterGain.gain.setTargetAtTime(v ? 0 : params.volume, audioCtx.currentTime, 0.1);
+      }
+    });
+    sysFolder.add(params, 'volume', 0.0, 1.0).name('音量').onChange(v => {
+      if (masterGain && !params.isPaused) {
+        masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.1);
+      }
+    });
+
+    const waterFolder = gui.addFolder('波と水質');
+    waterFolder.add(params, 'waveScale', 0.0, 3.0).name('波の荒々しさ');
+    waterFolder.add(params, 'waveSpeed', 0.1, 3.0).name('波のスピード');
+    waterFolder.add(params, 'waterClarity', 1.0, 40.0).name('水面の透明度').onChange(v => {
+      waterMat.attenuationDistance = v;
+    });
+    waterFolder.add(params, 'waterFogDensity', 0.01, 0.15).name('水中の濁り具合');
+    waterFolder.addColor(params, 'waterColor').name('水の色').onChange(c => {
+      waterMat.color.set(c);
+    });
+
+    const envFolder = gui.addFolder('環境');
+    envFolder.add(params, 'sunIntensity', 0.0, 10.0).name('太陽の強さ').onChange(v => {
+      sunLight.intensity = v;
+    });
+
+    gui.close(); // 初期状態で全体を折りたたむ
+
+    // ==========================================
+    // 2. 音響システム (波の音 ＋ 風の音)
+    // ==========================================
+    function initAudio() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      const bufferSize = audioCtx.sampleRate * 2; 
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let lastOut = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        let white = Math.random() * 2 - 1;
+        data[i] = (lastOut + (0.02 * white)) / 1.02; 
+        lastOut = data[i];
+        data[i] *= 3.5; 
+      }
+
+      const noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = buffer;
+      noiseSource.loop = true;
+
+      waveFilter = audioCtx.createBiquadFilter();
+      waveFilter.type = 'lowpass';
+      waveGain = audioCtx.createGain();
+
+      windFilter = audioCtx.createBiquadFilter();
+      windFilter.type = 'bandpass';
+      windFilter.Q.value = 8.0; 
+      windGain = audioCtx.createGain();
+      windGain.gain.value = 0.0;
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = params.isPaused ? 0 : params.volume;
+
+      noiseSource.connect(waveFilter);
+      waveFilter.connect(waveGain);
+      waveGain.connect(masterGain);
+
+      noiseSource.connect(windFilter);
+      windFilter.connect(windGain);
+      windGain.connect(masterGain);
+
+      masterGain.connect(audioCtx.destination);
+      noiseSource.start();
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('start-screen').style.display = 'none';
+    });
+
+    // ==========================================
+    // 3. シーンの基本設定
+    // ==========================================
+    const scene = new THREE.Scene();
+    const skyColor = new THREE.Color(0x87CEEB);
+    const waterFogColor = new THREE.Color(0x003366); 
+    
+    scene.background = skyColor.clone();
+    scene.fog = new THREE.FogExp2(skyColor.clone(), 0.005);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 8, 18);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.maxDistance = 60;
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, params.sunIntensity);
+    sunLight.position.set(20, 30, -20);
+    scene.add(sunLight);
+    scene.add(new THREE.AmbientLight(0x4080aa, 1.5));
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(150, 150),
+      new THREE.MeshStandardMaterial({ color: 0xd4c098, roughness: 1.0 })
+    );
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -15; 
+    scene.add(floor);
+
+    // ==========================================
+    // 4. 生き物たちの作成
+    // ==========================================
+    // 4-1. 魚
+    const fishShape = new THREE.Shape();
+    fishShape.moveTo(-0.4, 0); fishShape.lineTo(0, 0.2); fishShape.lineTo(0.2, 0); fishShape.lineTo(0.5, 0.3);      
+    fishShape.lineTo(0.5, -0.3); fishShape.lineTo(0.2, 0); fishShape.lineTo(0, -0.2); fishShape.lineTo(-0.4, 0);       
+
+    const fishGeo = new THREE.ShapeGeometry(fishShape);
+    fishGeo.rotateY(Math.PI / 2); 
+    const fishMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.4 });
+    const fishes = [];
+    for(let i = 0; i < 40; i++) {
+      const fish = new THREE.Mesh(fishGeo, fishMat);
+      fish.position.set((Math.random() - 0.5) * 30, -3 - Math.random() * 7, (Math.random() - 0.5) * 30);
+      fish.userData = {
+        velocity: new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize().multiplyScalar(0.05),
+        speed: 0.05 + Math.random() * 0.03, 
+        wiggleOffset: Math.random() * Math.PI * 2,
+        inAir: false
+      };
+      scene.add(fish); fishes.push(fish);
+    }
+
+    // 4-2. サメ
+    const sharkShape = new THREE.Shape();
+    sharkShape.moveTo(-2.0, 0); sharkShape.lineTo(-0.5, 0.6); sharkShape.lineTo(1.0, 0.15); sharkShape.lineTo(2.2, 0.8);      
+    sharkShape.lineTo(1.8, 0); sharkShape.lineTo(2.2, -0.8); sharkShape.lineTo(1.0, -0.15); sharkShape.lineTo(-0.5, -0.6); sharkShape.lineTo(-2.0, 0);       
+    const sharkGeo = new THREE.ShapeGeometry(sharkShape);
+    sharkGeo.rotateY(Math.PI / 2); 
+    const sharkMat = new THREE.MeshStandardMaterial({ color: 0x1a2b3c, side: THREE.DoubleSide, roughness: 0.6 });
+    const shark = new THREE.Mesh(sharkGeo, sharkMat);
+    shark.position.set(0, -7, 0);
+    scene.add(shark);
+
+    // 4-3. 鳥の群れ
+    const birds = [];
+    const birdMat = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff, flatShading: true, side: THREE.DoubleSide, roughness: 0.8,
+      transparent: true, opacity: 1.0 
+    });
+    const bodyGeo = new THREE.ConeGeometry(0.15, 0.8, 4); bodyGeo.rotateX(Math.PI / 2);
+    const wingGeo = new THREE.PlaneGeometry(1.2, 0.4); wingGeo.translate(0.6, 0, 0); wingGeo.rotateX(-Math.PI / 2); 
+    
+    for (let i = 0; i < 5; i++) { 
+      const birdGroup = new THREE.Group();
+      const birdBody = new THREE.Mesh(bodyGeo, birdMat); birdGroup.add(birdBody);
+      const leftWing = new THREE.Mesh(wingGeo, birdMat); birdGroup.add(leftWing);
+      const rightWing = new THREE.Mesh(wingGeo, birdMat); rightWing.rotation.y = Math.PI; birdGroup.add(rightWing);
+      
+      birdGroup.userData = {
+        phaseOffset: Math.random() * Math.PI * 2, radiusOffset: (Math.random() - 0.5) * 10,
+        heightOffset: (Math.random() - 0.5) * 5, speedMultiplier: 0.8 + Math.random() * 0.4,
+        wingSpeed: 10 + Math.random() * 8, leftWing: leftWing, rightWing: rightWing
+      };
+      scene.add(birdGroup); birds.push(birdGroup);
+    }
+
+    // ==========================================
+    // 5. ローポリ水面
+    // ==========================================
+    let waterGeo = new THREE.PlaneGeometry(100, 100, 50, 50).toNonIndexed();
+    const posAttribute = waterGeo.attributes.position;
+    waterGeo.userData.originalPositions = posAttribute.clone().array;
+
+    const waterMat = new THREE.MeshPhysicalMaterial({
+      color: params.waterColor,        
+      transmission: 1.0,               
+      ior: 1.333,                      
+      thickness: 10.0,                 
+      attenuationColor: 0x003366,      
+      attenuationDistance: params.waterClarity, 
+      roughness: 0.02,                 
+      metalness: 0.1,           
+      flatShading: true,               
+      side: THREE.DoubleSide,
+      transparent: true
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.rotation.x = -Math.PI / 2;
+    scene.add(water);
+
+    // ==========================================
+    // 6. ポストプロセッシング (水滴シェーダー)
+    // ==========================================
+    const WaterDropShader = {
+      uniforms: { 'tDiffuse': { value: null }, 'uTime': { value: 0.0 }, 'uProgress': { value: 0.0 } },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse; uniform float uTime; uniform float uProgress; varying vec2 vUv;
+        vec2 hash( vec2 p ) { p = vec2( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)) ); return -1.0 + 2.0*fract(sin(p)*43758.5453123); }
+        float noise( in vec2 p ) {
+          const float K1 = 0.366025404; const float K2 = 0.211324865;
+          vec2 i = floor( p + (p.x+p.y)*K1 ); vec2 a = p - i + (i.x+i.y)*K2; vec2 o = step(a.yx,a.xy);    
+          vec2 b = a - o + K2; vec2 c = a - 1.0 + 2.0*K2;
+          vec3 h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+          vec3 n = h*h*h*h*vec3( dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0))); return dot( n, vec3(70.0) );
+        }
+        void main() {
+          vec2 uv = vUv;
+          if (uProgress > 0.0) {
+            vec2 dropUv = uv * vec2(4.0, 2.0) + vec2(0.0, uTime * 2.5); float n = noise(dropUv * 3.0);
+            vec2 dropUv2 = uv * vec2(10.0, 5.0) + vec2(0.0, uTime * 4.0); float n2 = noise(dropUv2);
+            float totalNoise = (n * 0.7 + n2 * 0.3) * uProgress;
+            uv.x += totalNoise * 0.04; uv.y -= abs(totalNoise) * 0.1; 
+          }
+          gl_FragColor = texture2D(tDiffuse, uv);
+        }
+      `
+    };
+
+    const composer = new EffectComposer(renderer);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.addPass(new RenderPass(scene, camera));
+    const dropPass = new ShaderPass(WaterDropShader);
+    composer.addPass(dropPass);
+    composer.addPass(new OutputPass());
+
+    // ==========================================
+    // 7. ダイブ時のバブル（泡）
+    // ==========================================
+    const bubbles = [];
+    const bubbleGeo = new THREE.IcosahedronGeometry(0.15, 0);
+    const bubbleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, transparent: true, opacity: 1.0 });
+
+    function spawnBubbles() {
+      const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+      const spawnCenter = camera.position.clone().add(dir.multiplyScalar(4.5));
+
+      for(let i = 0; i < 40; i++) {
+        const b = new THREE.Mesh(bubbleGeo, bubbleMat);
+        b.position.copy(spawnCenter).add(new THREE.Vector3( (Math.random() - 0.5) * 5.0, (Math.random() - 0.5) * 3.0, (Math.random() - 0.5) * 5.0 ));
+        b.userData = { velY: 0.02 + Math.random() * 0.02, velX: (Math.random() - 0.5) * 0.015, velZ: (Math.random() - 0.5) * 0.015, life: 1.0, scale: 0.3 + Math.random() * 0.8 };
+        b.scale.setScalar(b.userData.scale);
+        scene.add(b); bubbles.push(b);
+      }
+    }
+
+    // ==========================================
+    // 8. 魚のジャンプ時・着水時の水しぶき
+    // ==========================================
+    const splashes = [];
+    const splashGeo = new THREE.IcosahedronGeometry(0.1, 0);
+    const splashMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, flatShading: true });
+
+    function spawnSplash(position) {
+      // 8個程度のパーティクルを放射状に飛ばす
+      for(let i = 0; i < 8; i++) {
+        const s = new THREE.Mesh(splashGeo, splashMat);
+        // 波の高さから少し上に配置
+        s.position.copy(position).add(new THREE.Vector3(0, 0.1, 0));
+        s.userData = { 
+          vel: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.15, // X軸の散らばり
+            0.05 + Math.random() * 0.15,  // Y軸（上方向）へ跳ねる
+            (Math.random() - 0.5) * 0.15  // Z軸の散らばり
+          ), 
+          life: 1.0, 
+          scale: 0.4 + Math.random() * 0.6,
+          rot: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(0.2)
+        };
+        s.scale.setScalar(s.userData.scale);
+        scene.add(s); splashes.push(s);
+      }
+    }
+
+    function getWaveHeight(worldX, worldZ, time) {
+      let z = Math.sin(worldX * 0.3 + time) * 0.8;
+      z += Math.cos(-worldZ * 0.2 + time * 0.8) * 0.8;
+      z += Math.sin((worldX - worldZ) * 0.4 + time * 1.2) * 0.4;
+      return z * params.waveScale; 
+    }
+
+    const clock = new THREE.Clock();
+    let waveTime = 0, globalTime = 0, currentFogDensity = 0.005, wasUnderwater = false;
+    const currentBgColor = new THREE.Color(skyColor);
+    const overlay = document.getElementById('underwater-overlay');
+
+    const TARGET_FPS = 24;
+    const FRAME_DURATION = 1.0 / TARGET_FPS;
+    let timeSinceLastRender = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      
+      timeSinceLastRender += delta;
+      if (timeSinceLastRender < FRAME_DURATION) return;
+      
+      const dt = timeSinceLastRender - (timeSinceLastRender % FRAME_DURATION);
+      timeSinceLastRender = timeSinceLastRender % FRAME_DURATION;
+
+      if (!params.isPaused) {
+        waveTime += dt * params.waveSpeed;
+        globalTime += dt;
+
+        // --- 鳥のアニメーション ---
+        for (let i = 0; i < birds.length; i++) {
+          const bird = birds[i], data = bird.userData;
+          const birdTime = globalTime * 0.5 * data.speedMultiplier + data.phaseOffset;
+          const radius = 22 + data.radiusOffset;
+          const birdPos = new THREE.Vector3( Math.cos(birdTime) * radius, 8 + data.heightOffset + Math.sin(birdTime * 1.5) * 3.0, Math.sin(birdTime) * radius );
+          bird.position.copy(birdPos);
+          const birdNext = new THREE.Vector3( Math.cos(birdTime + 0.1) * radius, 8 + data.heightOffset + Math.sin((birdTime + 0.1) * 1.5) * 3.0, Math.sin(birdTime + 0.1) * radius );
+          bird.lookAt(birdNext);
+          const flapAngle = Math.sin(globalTime * data.wingSpeed + data.phaseOffset) * 0.6;
+          data.leftWing.rotation.z = flapAngle; data.rightWing.rotation.z = flapAngle;
+        }
+
+        // --- サメのアニメーション ---
+        const sharkTime = globalTime * 0.3;
+        const sharkPos = new THREE.Vector3( Math.sin(sharkTime * 0.7) * 18, -7 + Math.cos(sharkTime * 0.9) * 2.5, Math.cos(sharkTime * 0.5) * 18 );
+        const sharkNext = new THREE.Vector3( Math.sin((sharkTime + 0.1) * 0.7) * 18, -7 + Math.cos((sharkTime + 0.1) * 0.9) * 2.5, Math.cos((sharkTime + 0.1) * 0.5) * 18 );
+        shark.position.copy(sharkPos); shark.lookAt(sharkNext); shark.rotateY(Math.sin(globalTime * 3) * 0.1); 
+
+        // --- 小魚の群れ ---
+        const flockTarget = new THREE.Vector3( Math.cos(globalTime * 0.3) * 12, -4 + Math.sin(globalTime * 0.5) * 2, Math.sin(globalTime * 0.3) * 12 );
+
+        for (let i = 0; i < fishes.length; i++) {
+          const fish = fishes[i], v = fish.userData.velocity;
+          const fishSurfaceY = getWaveHeight(fish.position.x, fish.position.z, waveTime);
+
+          if (fish.position.y > fishSurfaceY) {
+            if (!fish.userData.inAir) { 
+              fish.userData.inAir = true; 
+              v.y = 0.15 + Math.random() * 0.15; v.x *= 2.5; v.z *= 2.5; 
+              // ★ 水面から飛び出す時にも水しぶきを上げる
+              spawnSplash(fish.position); 
+            }
+            v.y -= 0.015; fish.position.add(v);
+            if (v.lengthSq() > 0.0001) fish.lookAt(fish.position.clone().add(v));
+            fish.rotateY(Math.sin(globalTime * 40 + fish.userData.wiggleOffset) * 0.1);
+          } else {
+            if (fish.userData.inAir) { 
+              fish.userData.inAir = false; 
+              // ★ 水面に着地した時に水しぶきを上げる
+              spawnSplash(fish.position); 
+            }
+            v.add(flockTarget.clone().sub(fish.position).normalize().multiplyScalar(0.002));
+            const separation = new THREE.Vector3(); let closeCount = 0;
+            for (let j = 0; j < fishes.length; j++) {
+              if (i === j) continue;
+              const dist = fish.position.distanceTo(fishes[j].position);
+              if (dist < 2.0) { separation.add(fish.position.clone().sub(fishes[j].position).normalize().divideScalar(dist)); closeCount++; }
+            }
+            if (closeCount > 0) v.add(separation.divideScalar(closeCount).multiplyScalar(0.015));
+            const distToShark = fish.position.distanceTo(shark.position);
+            if (distToShark < 12.0) v.add(fish.position.clone().sub(shark.position).normalize().multiplyScalar((12.0 - distToShark) * 0.003));
+            if (fish.position.y > -1.0 && distToShark >= 12.0) v.y -= 0.01; else if (fish.position.y < -12.0) v.y += 0.01;
+            v.normalize().multiplyScalar(fish.userData.speed + (distToShark < 12 ? 0.05 : 0));
+            fish.position.add(v); fish.lookAt(fish.position.clone().add(v));
+            fish.rotateY(Math.sin(globalTime * (distToShark < 12 ? 30 : 15) + fish.userData.wiggleOffset) * 0.15);
+          }
+        }
+
+        // --- 水しぶきのアニメーション ---
+        for (let i = splashes.length - 1; i >= 0; i--) {
+          const s = splashes[i];
+          s.userData.vel.y -= 0.01; // 重力で落下
+          s.position.add(s.userData.vel);
+          s.rotation.x += s.userData.rot.x;
+          s.rotation.y += s.userData.rot.y;
+          s.userData.life -= 0.04; // 寿命を減らす
+          
+          // 寿命に合わせてスケールを小さくする（消える演出）
+          s.scale.setScalar(s.userData.scale * Math.max(0, s.userData.life));
+          
+          // 完全に消えるか、波の下に沈んだら削除
+          if (s.userData.life <= 0 || s.position.y < getWaveHeight(s.position.x, s.position.z, waveTime) - 0.3) {
+            scene.remove(s); splashes.splice(i, 1);
+          }
+        }
+
+        // --- 泡のアニメーション ---
+        for (let i = bubbles.length - 1; i >= 0; i--) {
+          const b = bubbles[i]; b.position.y += b.userData.velY; b.position.x += b.userData.velX; b.position.z += b.userData.velZ;
+          b.position.x += Math.sin(globalTime * 10 + b.uuid) * 0.01; b.userData.life -= 0.003;
+          b.scale.setScalar(b.userData.scale * Math.min(1.0, b.userData.life * 3.0)); b.material.opacity = b.userData.life;
+          if (b.userData.life <= 0 || b.position.y > getWaveHeight(b.position.x, b.position.z, waveTime)) { scene.remove(b); bubbles.splice(i, 1); }
+        }
+      }
+
+      // --- 波の更新 ---
+      const positions = waterGeo.attributes.position.array;
+      const orig = waterGeo.userData.originalPositions;
+      for (let i = 0; i < posAttribute.count; i += 3) {
+        for(let j = 0; j < 3; j++) {
+          const idx = (i + j) * 3; positions[idx + 2] = getWaveHeight(orig[idx], -orig[idx + 1], waveTime); 
+        }
+      }
+      waterGeo.attributes.position.needsUpdate = true; waterGeo.computeVertexNormals();
+
+      // --- 水中・水上の切り替え ---
+      const cameraWaveHeight = getWaveHeight(camera.position.x, camera.position.z, waveTime);
+      const isUnderwater = camera.position.y <= cameraWaveHeight;
+
+      const targetDensity = isUnderwater ? params.waterFogDensity : 0.005; 
+      const targetColor = isUnderwater ? waterFogColor : skyColor;
+
+      if (isUnderwater) {
+        if (!wasUnderwater && !params.isPaused) spawnBubbles(); 
+        
+        currentFogDensity = targetDensity; currentBgColor.copy(targetColor); overlay.style.opacity = '1';
+        dropPass.uniforms.uProgress.value = 0.0; 
+        
+        if (audioCtx && !params.isPaused) { 
+          waveFilter.frequency.setTargetAtTime(150, audioCtx.currentTime, 0.05); 
+          waveGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.05); 
+          windGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05); 
+        }
+      } else {
+        if (wasUnderwater && !params.isPaused) dropPass.uniforms.uProgress.value = 1.0; 
+        
+        currentFogDensity += (targetDensity - currentFogDensity) * 0.1; currentBgColor.lerp(targetColor, 0.1); overlay.style.opacity = '0';
+        
+        if (audioCtx && !params.isPaused) {
+          const waveLFO = (Math.sin(waveTime * 0.8) + 1.0) / 2.0; 
+          waveFilter.frequency.setTargetAtTime(300 + waveLFO * 800, audioCtx.currentTime, 0.1); 
+          waveGain.gain.setTargetAtTime(0.2 + waveLFO * 0.3, audioCtx.currentTime, 0.1);
+
+          const windLFO = Math.sin(globalTime * 0.4);
+          const windFreq = 500 + windLFO * 300 + Math.sin(globalTime * 1.1) * 100;
+          windFilter.frequency.setValueAtTime(windFreq, audioCtx.currentTime);
+          windGain.gain.setTargetAtTime(0.3 + (Math.sin(globalTime * 0.7)*0.1), audioCtx.currentTime, 0.5);
+        }
+      }
+      wasUnderwater = isUnderwater;
+      scene.background = currentBgColor; scene.fog.color = currentBgColor; scene.fog.density = currentFogDensity;
+
+      if(dropPass.uniforms.uProgress.value > 0) dropPass.uniforms.uProgress.value = Math.max(0, dropPass.uniforms.uProgress.value - dt * 0.4); 
+      dropPass.uniforms.uTime.value = globalTime;
+
+      controls.update();
+      composer.render();
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
