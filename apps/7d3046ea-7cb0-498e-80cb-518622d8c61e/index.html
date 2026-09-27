@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作画支援用パースグリッド</title>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #ffffff; }
+    canvas { display: block; }
+    
+    #overlay-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0.5;
+      display: none;
+      transform-origin: center center;
+    }
+
+    #ui-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      font-family: sans-serif;
+      z-index: 10;
+      width: 280px;
+    }
+    button, input, select { margin-top: 5px; cursor: pointer; }
+    .input-block { margin-bottom: 15px; }
+    .btn {
+      display: block;
+      padding: 8px 16px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      text-align: center;
+      width: 100%;
+      box-sizing: border-box;
+      font-weight: bold;
+    }
+    .btn:hover { background: #555; }
+    .btn-group {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .btn-group .btn {
+      flex: 1;
+      padding: 6px;
+      font-size: 13px;
+    }
+    .instruction {
+      font-size: 12px;
+      color: #555;
+      margin: 8px 0 0 0;
+      line-height: 1.5;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <img id="overlay-img" src="" alt="下絵">
+
+  <div id="ui-container">
+    <div class="input-block">
+      <label style="font-weight: bold; font-size: 14px; color: #222;">1. モデルを追加 (GLTF/GLB)</label>
+      <input type="file" id="file-input" accept=".gltf,.glb" multiple>
+      
+      <div class="btn-group">
+        <button id="btn-translate" class="btn">移動</button>
+        <button id="btn-rotate" class="btn">回転</button>
+        <button id="btn-scale" class="btn">拡縮</button>
+      </div>
+      <p class="instruction">
+        👆 <b>モデルをクリック</b>で選択・操作<br>
+        ☀️ <b>Shiftキー + 左ドラッグ</b>で影の向きを変更
+      </p>
+    </div>
+
+    <div class="input-block">
+      <label style="font-weight: bold; font-size: 14px; color: #222;">2. 下絵を重ねる (PNG/JPG)</label>
+      <input type="file" id="image-input" accept="image/png, image/jpeg" multiple>
+      <select id="image-select" style="display: none; width: 100%; margin-top: 10px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"></select>
+      <p class="instruction">複数読み込んでドロップダウンで切り替え可能。</p>
+    </div>
+
+    <div>
+      <button id="export-btn" class="btn" style="background: #0066cc;">3. 3Dのみ画像書き出し</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TransformControls } from 'three/addons/controls/TransformControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
+    import GUI from 'https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js';
+
+    let scene, camera, renderer, effect, controls, light, transformControl;
+    let gridGroup, axesHelper, sunMesh, gradientMap, floorPlane;
+    const models = [];
+    const overlayImages = [];
+
+    let renderTarget, fsScene, fsCamera, fsMaterial, fsQuad;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const lightSpherical = new THREE.Spherical();
+    let isDraggingLight = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    // --- GUIパラメーター ---
+    const displayParams = {
+      showGrid: true,
+      gridDivisions: 50,
+      showAxes: true,
+      showLight: true
+    };
+
+    const floorParams = {
+      opacity: 0.5
+    };
+
+    const fisheyeParams = {
+      distortion: 0.0
+    };
+
+    // 下絵用のパラメーター
+    const imageParams = {
+      visible: false,
+      opacity: 0.5
+    };
+
+    const imageTransform = {
+      x: 0,
+      y: 0,
+      scale: 1.0,
+      reset: function() {
+        this.x = 0;
+        this.y = 0;
+        this.scale = 1.0;
+        updateImageTransform();
+      }
+    };
+
+    const arrayParams = {
+      count: 2,
+      offsetX: 1.0,
+      offsetY: 0.0,
+      offsetZ: 0.0,
+      apply: function() {
+        const targetObj = transformControl.object;
+        if (!targetObj) {
+          alert("複製するモデルをクリックして選択してください。");
+          return;
+        }
+        for (let i = 1; i < this.count; i++) {
+          const clone = targetObj.clone();
+          clone.position.x += this.offsetX * i;
+          clone.position.y += this.offsetY * i;
+          clone.position.z += this.offsetZ * i;
+          scene.add(clone);
+          models.push(clone);
+        }
+      }
+    };
+
+    init();
+    animate();
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(3, 3, 5); 
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.body.appendChild(renderer.domElement);
+
+      effect = new OutlineEffect(renderer, {
+        defaultThickness: 0.003,
+        defaultColor: [0, 0, 0],
+        defaultAlpha: 1.0,
+      });
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 1, 0);
+      controls.update();
+
+      transformControl = new TransformControls(camera, renderer.domElement);
+      transformControl.addEventListener('dragging-changed', function (event) {
+        controls.enabled = !event.value;
+      });
+      scene.add(transformControl);
+
+      const format = (renderer.capabilities.isWebGL2) ? THREE.RedFormat : THREE.LuminanceFormat;
+      const colors = new Uint8Array([100, 255]);
+      gradientMap = new THREE.DataTexture(colors, colors.length, 1, format);
+      gradientMap.needsUpdate = true;
+      gradientMap.magFilter = THREE.NearestFilter;
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+      light = new THREE.DirectionalLight(0xffffff, 1.5);
+      light.position.set(5, 5, 5);
+      light.castShadow = true;
+      light.shadow.mapSize.width = 2048;
+      light.shadow.mapSize.height = 2048;
+      light.shadow.bias = -0.001;
+      const d = 15;
+      light.shadow.camera.left = -d;
+      light.shadow.camera.right = d;
+      light.shadow.camera.top = d;
+      light.shadow.camera.bottom = -d;
+      light.shadow.camera.near = 0.1;
+      light.shadow.camera.far = 40;
+      scene.add(light);
+      
+      lightSpherical.setFromVector3(light.position);
+
+      const sunGeo = new THREE.SphereGeometry(0.2);
+      const sunMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+      sunMesh = new THREE.Mesh(sunGeo, sunMat);
+      sunMesh.position.copy(light.position);
+      scene.add(sunMesh);
+
+      const planeGeo = new THREE.PlaneGeometry(100, 100);
+      const planeMat = new THREE.MeshToonMaterial({ 
+        color: 0xffffff, 
+        gradientMap: gradientMap,
+        transparent: true,
+        opacity: floorParams.opacity,
+        side: THREE.DoubleSide
+      });
+      floorPlane = new THREE.Mesh(planeGeo, planeMat);
+      floorPlane.rotation.x = -Math.PI / 2;
+      floorPlane.receiveShadow = true;
+      scene.add(floorPlane);
+
+      gridGroup = new THREE.Group();
+      scene.add(gridGroup);
+      generateGrids(displayParams.gridDivisions);
+
+      axesHelper = new THREE.AxesHelper(3);
+      axesHelper.position.y = 0.01;
+      scene.add(axesHelper);
+
+      setupFisheye();
+      setupGUI();
+
+      window.addEventListener('resize', onWindowResize);
+      document.getElementById('file-input').addEventListener('change', onFileLoad);
+      document.getElementById('image-input').addEventListener('change', onImageLoad);
+      document.getElementById('image-select').addEventListener('change', onImageSelect);
+      document.getElementById('export-btn').addEventListener('click', exportImage);
+      
+      document.getElementById('btn-translate').addEventListener('click', () => transformControl.setMode('translate'));
+      document.getElementById('btn-rotate').addEventListener('click', () => transformControl.setMode('rotate'));
+      document.getElementById('btn-scale').addEventListener('click', () => transformControl.setMode('scale'));
+
+      window.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    }
+
+    function setupFisheye() {
+      renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+      fsCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+      fsScene = new THREE.Scene();
+
+      fsMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          tDiffuse: { value: renderTarget.texture },
+          distortion: { value: 0.0 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D tDiffuse;
+          uniform float distortion;
+          varying vec2 vUv;
+          void main() {
+            vec2 p = vUv * 2.0 - 1.0;
+            float r2 = dot(p, p);
+            vec2 uv = p * (1.0 + distortion * r2);
+            uv = (uv + 1.0) / 2.0;
+
+            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+              gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            } else {
+              gl_FragColor = texture2D(tDiffuse, uv);
+            }
+          }
+        `
+      });
+
+      fsQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fsMaterial);
+      fsScene.add(fsQuad);
+    }
+
+    function generateGrids(divisions) {
+      while (gridGroup.children.length > 0) {
+        const grid = gridGroup.children[0];
+        gridGroup.remove(grid);
+        grid.geometry.dispose();
+        grid.material.dispose();
+      }
+
+      const mainGridColor = 0x666666;
+      const subGridColor = 0x999999;
+      const gridSize = 50;
+
+      const gridXZ = new THREE.GridHelper(gridSize, divisions, mainGridColor, subGridColor);
+      gridXZ.position.y = 0.01;
+      gridGroup.add(gridXZ);
+
+      const gridXY = new THREE.GridHelper(gridSize, divisions, mainGridColor, subGridColor);
+      gridXY.rotation.x = Math.PI / 2;
+      gridXY.position.set(0, gridSize / 2, 0); 
+      gridGroup.add(gridXY);
+
+      const gridYZ = new THREE.GridHelper(gridSize, divisions, mainGridColor, subGridColor);
+      gridYZ.rotation.z = Math.PI / 2;
+      gridYZ.position.set(0, gridSize / 2, 0); 
+      gridGroup.add(gridYZ);
+    }
+
+    function updateImageTransform() {
+      const overlayImg = document.getElementById('overlay-img');
+      overlayImg.style.transform = `translate(${imageTransform.x}%, ${imageTransform.y}%) scale(${imageTransform.scale})`;
+    }
+
+    function setupGUI() {
+      const gui = new GUI({ title: '詳細設定パネル', width: 300 });
+      
+      const cameraParams = { fov: camera.fov };
+      gui.add(cameraParams, 'fov', 10, 140, 1).name('カメラ画角 (FOV)').onChange((value) => {
+        camera.fov = value;
+        camera.updateProjectionMatrix();
+      });
+
+      const lensFolder = gui.addFolder('レンズ効果');
+      lensFolder.add(fisheyeParams, 'distortion', 0.0, 0.5, 0.01).name('魚眼の歪み強さ');
+
+      const arrFolder = gui.addFolder('配列複製 (選択オブジェクト)');
+      arrFolder.add(arrayParams, 'count', 2, 20, 1).name('複製する合計数');
+      arrFolder.add(arrayParams, 'offsetX', -10, 10, 0.1).name('X方向の間隔');
+      arrFolder.add(arrayParams, 'offsetY', -10, 10, 0.1).name('Y方向の間隔');
+      arrFolder.add(arrayParams, 'offsetZ', -10, 10, 0.1).name('Z方向の間隔');
+      arrFolder.add(arrayParams, 'apply').name('配列複製を実行');
+
+      const imageFolder = gui.addFolder('下絵の調整');
+      imageFolder.add(imageParams, 'visible').name('下絵を表示する').onChange((v) => {
+        const overlayImg = document.getElementById('overlay-img');
+        if (overlayImg.src && overlayImg.src !== "" && overlayImg.src !== window.location.href) {
+          overlayImg.style.display = v ? 'block' : 'none';
+        }
+      }).listen(); // UIに連動させる
+      imageFolder.add(imageParams, 'opacity', 0.1, 1.0, 0.05).name('不透明度').onChange((value) => {
+        document.getElementById('overlay-img').style.opacity = value;
+      });
+      imageFolder.add(imageTransform, 'x', -100, 100, 1).name('位置 X (左右)').onChange(updateImageTransform).listen();
+      imageFolder.add(imageTransform, 'y', -100, 100, 1).name('位置 Y (上下)').onChange(updateImageTransform).listen();
+      imageFolder.add(imageTransform, 'scale', 0.1, 5.0, 0.05).name('拡大縮小').onChange(updateImageTransform).listen();
+      imageFolder.add(imageTransform, 'reset').name('位置・サイズをリセット');
+
+      const displayFolder = gui.addFolder('ガイドと床の設定');
+      displayFolder.add(floorParams, 'opacity', 0.0, 1.0, 0.05).name('床の不透明度').onChange(v => {
+        floorPlane.material.opacity = v;
+        floorPlane.visible = (v > 0.0);
+      });
+      displayFolder.add(displayParams, 'showGrid').name('立体グリッド').onChange(v => gridGroup.visible = v);
+      displayFolder.add(displayParams, 'gridDivisions', 10, 200, 10).name('グリッドの細かさ').onChange(v => generateGrids(v));
+      displayFolder.add(displayParams, 'showAxes').name('XYZ軸').onChange(v => axesHelper.visible = v);
+      displayFolder.add(displayParams, 'showLight').name('光源のマーク').onChange(v => sunMesh.visible = v);
+    }
+
+    function onFileLoad(event) {
+      const files = event.target.files;
+      if (files.length === 0) return;
+
+      const loader = new GLTFLoader();
+
+      for (let i = 0; i < files.length; i++) {
+        const url = URL.createObjectURL(files[i]);
+        loader.load(url, (gltf) => {
+          const model = gltf.scene;
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.material = new THREE.MeshToonMaterial({
+                color: 0xcccccc,
+                gradientMap: gradientMap
+              });
+            }
+          });
+          scene.add(model);
+          models.push(model);
+          transformControl.attach(model);
+        });
+      }
+      event.target.value = '';
+    }
+
+    function onImageLoad(event) {
+      const files = event.target.files;
+      if (files.length === 0) return;
+
+      const selectEl = document.getElementById('image-select');
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const url = URL.createObjectURL(file);
+        
+        overlayImages.push({ name: file.name, url: url });
+
+        const option = document.createElement('option');
+        option.value = overlayImages.length - 1;
+        option.text = file.name;
+        selectEl.appendChild(option);
+      }
+
+      selectEl.style.display = 'block';
+      const lastIndex = overlayImages.length - 1;
+      selectEl.value = lastIndex;
+      
+      imageParams.visible = true; // トグルをONにする
+      const overlayImg = document.getElementById('overlay-img');
+      overlayImg.src = overlayImages[lastIndex].url;
+      overlayImg.style.display = 'block';
+
+      event.target.value = '';
+    }
+
+    function onImageSelect(event) {
+      const index = event.target.value;
+      if (index !== "") {
+        imageParams.visible = true; // トグルをONにする
+        const overlayImg = document.getElementById('overlay-img');
+        overlayImg.src = overlayImages[index].url;
+        overlayImg.style.display = 'block';
+      }
+    }
+
+    function onPointerDown(event) {
+      if (event.target.tagName !== 'CANVAS') return;
+
+      if (event.shiftKey) {
+        isDraggingLight = true;
+        controls.enabled = false;
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+        return;
+      }
+
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(models, true);
+
+      if (intersects.length > 0) {
+        let object = intersects[0].object;
+        while (object.parent && !models.includes(object)) {
+          object = object.parent;
+        }
+        if (models.includes(object)) {
+          transformControl.attach(object);
+        }
+      } else {
+        transformControl.detach();
+      }
+    }
+
+    function onPointerMove(event) {
+      if (isDraggingLight) {
+        const deltaX = event.clientX - previousMousePosition.x;
+        const deltaY = event.clientY - previousMousePosition.y;
+
+        lightSpherical.theta -= deltaX * 0.01;
+        lightSpherical.phi -= deltaY * 0.01;
+        lightSpherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, lightSpherical.phi));
+
+        light.position.setFromSpherical(lightSpherical);
+        sunMesh.position.copy(light.position);
+
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+      }
+    }
+
+    function onPointerUp(event) {
+      if (isDraggingLight) {
+        isDraggingLight = false;
+        controls.enabled = true;
+      }
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderTarget.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // --- 【修正】描画処理の順番を変更 ---
+    function renderScene() {
+      if (fisheyeParams.distortion > 0) {
+        // 1. レンダリング先をターゲット（裏側のキャンバス）に指定
+        renderer.setRenderTarget(renderTarget);
+        renderer.clear();
+        
+        // 2. そこに向かってトゥーンエフェクト込みで描画
+        effect.render(scene, camera);
+        
+        // 3. レンダリング先を通常の画面に戻す
+        renderer.setRenderTarget(null);
+        renderer.clear();
+        
+        // 4. 先ほど描いたターゲットの画像を魚眼シェーダーで歪ませて表示
+        fsMaterial.uniforms.distortion.value = fisheyeParams.distortion;
+        renderer.render(fsScene, fsCamera);
+      } else {
+        // 通常時
+        renderer.setRenderTarget(null);
+        effect.render(scene, camera);
+      }
+    }
+
+    function exportImage() {
+      const attachedObject = transformControl.object;
+      transformControl.detach();
+
+      renderScene();
+
+      const dataURL = renderer.domElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = 'manga_reference.png';
+      link.click();
+
+      if (attachedObject) transformControl.attach(attachedObject);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderScene();
+    }
+  </script>
+</body>
+</html>
