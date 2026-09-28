@@ -73,8 +73,9 @@ article blockquote:not(.twitter-tweet){background:rgba(255,255,255,.035);padding
 .inline-link,.embed-fallback a,figcaption a{color:var(--light);text-decoration:underline;text-underline-offset:4px;overflow-wrap:anywhere}
 .inline-link:hover{opacity:.75}
 .video-embed iframe{display:block;width:100%;aspect-ratio:16/9;min-height:200px;border:0;border-radius:8px;background:#101419}
-.social-embed{width:100%;max-width:400px;margin:32px auto}
-.x-post-view{display:flex;justify-content:center}
+.niconico-embed{width:100%;max-width:640px;margin:32px auto}.niconico-embed iframe{min-height:0}.niconico-embed figcaption{text-align:center;font-size:12px;margin-top:10px}
+.social-embed{width:100%;margin:32px auto}
+.x-post-view{display:block;width:100%;max-width:550px;margin:0 auto}
 .x-post-view .twitter-tweet{margin-left:auto!important;margin-right:auto!important;max-width:100%!important}
 .x-post-view iframe,.x-post-view twitter-widget{border-radius:14px!important;overflow:hidden!important;clip-path:inset(0 round 14px);background:transparent!important}
 .x-post-status{font-size:13px;color:var(--muted)}
@@ -107,7 +108,7 @@ footer{position:relative;z-index:10;padding:80px 32px;border-top:1px solid var(-
 .rss-status{margin-left:.8em;letter-spacing:normal}
 @media(max-width:767px){header.site{padding:32px}.site-nav{display:none}.row{grid-template-columns:minmax(0,1fr);gap:3px;padding:12px 0}.entry-title{font-size:20px}.brand{font-size:32px}article h1{font-size:26px}.row:hover,.row:focus-visible{padding-left:12px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before{animation:none!important;transition:none!important}}</style></head><body><div class="texture-overlay" aria-hidden="true"></div><header class="site"><div class="brand-block"><a class="brand" href="../../index.html">AMICA! v2</a></div></header><main><article><time>2026-09-27</time><h1>昔のSAIのファイルをMacで開く</h1><p>一時期、ペイントツールSAIでイラストを描いていたことがあったんですが、Macに移行してからSAIは使えなくなり、拡張子.saiのファイルは開けなくなってしまいました。</p><p>ファイルの変換ツールとかがあればいいのにな…とずっと思ってたんですが、そういうツールは検索してもなく……しかし今ならChatGPTとかに頼めば作れるのでは？
-ということで、頼んだところ、出来ました。</p><p>変換してみたファイルがこちら。</p><figure><img src="../../photos/5a9cdda3-6f96-4832-b387-264f0a0617b7.jpg" alt="ICOのヨルダ"><figcaption class="photo-caption">ICOのヨルダ</figcaption></figure><p>一部の.saiファイルは破損していて開けませんでしたが、それも修復機能を搭載したら開けました。</p><p>作った変換ツールも公開するつもりでしたが、規約的に公開して大丈夫かどうか若干判断がつかなかったので、とりあえず非公開。プライベートなローカルアプリとして活用予定です。</p><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-09-24_11-58-42/index.html" rel="prev">← 前の日記</a><span></span></nav><a class="back" href="../../index.html">← 日記一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / @yuemichitaka <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
+ということで、頼んだところ、出来ました。</p><p>変換してみたファイルがこちら。</p><figure><img src="../../photos/5a9cdda3-6f96-4832-b387-264f0a0617b7.jpg" alt="ICOのヨルダ"><figcaption class="photo-caption">ICOのヨルダ</figcaption></figure><p>一部の.saiファイルは破損していて開けませんでしたが、それも修復機能を搭載したら開けました。</p><p>作った変換ツールも公開するつもりでしたが、規約的に公開して大丈夫かどうか若干判断がつかなかったので、とりあえず非公開。プライベートなローカルアプリとして活用予定です。</p><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-09-24_11-58-42/index.html" rel="prev">← 前の日記</a><a href="../2026-09-28_21-35-01/index.html" rel="next">次の日記 →</a></nav><a class="back" href="../../index.html">← 日記一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / @yuemichitaka <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
   'use strict';
   const button = document.getElementById('rss-copy');
   if (!button) return;
