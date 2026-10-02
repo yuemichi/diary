@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="色と透明度を変えずにPNGを軽量化。画像はブラウザ内で処理し、サーバーへ送信しません。">
+<title>Palette PNG</title>
+<link rel="stylesheet" href="./style.css">
+<script src="./png-core.js" defer></script><script src="./app.js" defer></script>
+</head>
+<body>
+<main>
+<header><a class="brand" href="./"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Palette PNG</a><span class="badge">ブラウザ内で処理</span></header>
+<div id="compat" class="notice" hidden></div>
+<section id="drop" class="drop" aria-label="PNGの追加">
+ <div class="drop-icon" aria-hidden="true">↓</div><h2>PNGをここにドロップ</h2><p>複数枚をまとめて追加できます</p>
+ <button id="pick" class="primary">ファイルを選択</button><input id="files" type="file" accept=".png,image/png" multiple hidden>
+ <small>画像はサーバーに送信されません</small>
+</section>
+<section class="workspace">
+ <div class="toolbar"><label class="check"><input id="skip" type="checkbox" checked><span>小さくならない画像は保存しない</span></label><button id="clear" class="quiet" disabled>一覧をクリア</button></div>
+ <div id="empty" class="empty">追加した画像と、変換結果がここに表示されます。</div>
+ <div id="list" class="list" role="list" aria-label="変換する画像"></div>
+ <div class="bottom"><div><p id="status" role="status" aria-live="polite">PNGを追加してください</p><p id="summary" class="summary"></p></div><div class="actions"><button id="stop" class="quiet" hidden>停止</button><button id="convert" class="primary" disabled>変換する <span aria-hidden="true">→</span></button><button id="zip" class="secondary" disabled>まとめてZIP保存</button></div></div>
+ <progress id="progress" max="1" value="0" hidden aria-label="変換の進捗"></progress>
+</section>
+<section class="notes"><div><span class="note-number">01</span><h3>元の画像はそのまま</h3><p>原寸・色・透明度を維持。元ファイルを上書きせず、別名でダウンロードします。</p></div><div><span class="note-number">02</span><h3>色数に合わせて最適化</h3><p>1 / 2 / 4 / 8bitを自動選択。256種類を超える色・透明度は、減色せずにスキップします。</p></div><div><span class="note-number">03</span><h3>公開原稿にも、素材にも</h3><p>白黒原稿、差し色イラスト、ドット絵に。ICCプロファイルと解像度情報も引き継ぎます。</p></div></section>
+<details><summary>対応形式と使い方</summary><p>静止PNGに対応しています。16bit／チャンネル、インターレースPNG、APNGは未対応です。ICCプロファイル付きのグレースケールPNGは、色の見え方を保つため変換せずスキップします。1枚5,000万画素・256MB以内、展開データも256MB以内です。結果の保持は合計200MBまで。多い場合は保存後に一覧をクリアし、分けて処理してください。</p><p>「変換する」→個別の「保存」または「まとめてZIP保存」。ページを閉じると結果は消えます。完全透明部分のRGB値も数えるため、見た目が少色でも256種類を超える場合があります。</p><p>ICC・sRGB・ガンマ・色度・DPI・テキスト・EXIFを保持します。その他の付帯情報は引き継ぎません。圧縮結果はMac版と異なることがあります。閲覧時のメモリ量を減らすツールではありません。</p></details>
+<footer><span>Palette PNG <span class="version">WEB / 0.1.2</span></span></footer>
+</main>
+</body></html>
