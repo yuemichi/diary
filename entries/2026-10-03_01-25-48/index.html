@@ -1,4 +1,4 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src 'self'; img-src 'self' data: https://pbs.twimg.com https://abs.twimg.com https://syndication.twitter.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'sha256-w0nHSMvH2cDo9Riy84Y9V9lXT01Yu8zV+hghWeZ0m38=' 'sha256-Mq94lqHBwI0JgrTmgR2Pm9eGULFO2W+TZ082EQ7OFio=' https://platform.twitter.com https://cdn.syndication.twimg.com https://syndication.twitter.com; connect-src https://syndication.twitter.com https://cdn.syndication.twimg.com; frame-src https://platform.twitter.com https://syndication.twitter.com ; base-uri 'none'; form-action 'none'"><title>PNG画像をパレット化する | AMICA! v2</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;700&amp;display=swap" referrerpolicy="no-referrer"><link rel="alternate" type="application/rss+xml" title="RSS" href="https://yuemichi.github.io/diary/feed.xml"><style>:root{color-scheme:dark;--dark:#0d0f12;--light:#39c5bb;--text:#e0e0e0;--muted:#9b9ea3;--line:rgba(255,255,255,.065)}
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src 'self'; img-src 'self' data: ; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'sha256-w0nHSMvH2cDo9Riy84Y9V9lXT01Yu8zV+hghWeZ0m38='; frame-src https://www.youtube-nocookie.com ; base-uri 'none'; form-action 'none'"><title>マンガ置き場＆管理用ツール制作中 | AMICA! v2</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;700&amp;display=swap" referrerpolicy="no-referrer"><link rel="alternate" type="application/rss+xml" title="RSS" href="https://yuemichi.github.io/diary/feed.xml"><style>:root{color-scheme:dark;--dark:#0d0f12;--light:#39c5bb;--text:#e0e0e0;--muted:#9b9ea3;--line:rgba(255,255,255,.065)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--dark);color:var(--text);font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',-apple-system,BlinkMacSystemFont,sans-serif;font-size:16px;font-weight:300;line-height:1.8;-webkit-font-smoothing:antialiased}
@@ -107,9 +107,8 @@ footer{position:relative;z-index:10;padding:80px 32px;border-top:1px solid var(-
 .audio-embed{margin:32px 0}.audio-embed iframe{display:block;width:100%;border:0;border-radius:8px}.audio-embed figcaption{margin-top:10px;font-size:12px}
 .rss-status{margin-left:.8em;letter-spacing:normal}
 @media(max-width:767px){header.site{padding:32px}.site-nav{display:none}.row{grid-template-columns:minmax(0,1fr);gap:3px;padding:12px 0}.entry-title{font-size:20px}.brand{font-size:32px}article h1{font-size:26px}.row:hover,.row:focus-visible{padding-left:12px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before{animation:none!important;transition:none!important}}</style></head><body><div class="texture-overlay" aria-hidden="true"></div><header class="site"><div class="brand-block"><a class="brand" href="../../index.html">AMICA! v2</a></div></header><main><article><time>2026-10-01</time><h1>PNG画像をパレット化する</h1><p>フルカラー（Truecolor）形式のPNGをパレット形式（インデックスカラー形式）に変換するアプリを作ったので共有。
-<a class="inline-link" href="../../apps/a438a028-b58e-44a7-9e6c-39e4b7f42adf/index.html" target="_blank" rel="noopener noreferrer">PalettePNG-Web</a></p><p>フルカラー形式だと各ピクセルでRGBの値をもつ必要がありますが、パレット形式だと単に色に応じた番号であらわすだけなので、色数が少ない絵ならサイズが軽くなります。モノクロ二値の画像なら0か1かの1bitで表せるので非常に軽い。
-まあ、パレット形式にしなくてもモノクロ二値な時点で普通に軽いので、あまり変わんないっちゃ変わんないのですが…。</p><p>PNGにこういう機能があるということを最近まで知りませんでした。クリスタにもそんな書き出しオプションはなく、フルカラー形式でしか保存できないし…（Photoshopだとパレット形式で保存出来るらしい）。</p><p>APNGという、PNG拡張子でアニメーションがやれることもつい最近知りました。PNG、拡張子の中では万能かつ扱いやすくて好きかも。ただしAPNGに対応していないサイトも結構あり（Xやnoteなど）、微妙に不遇な面も。</p><hr class="diary-rule dotted"><p>最近の現象</p><ul class="diary-list"><li>マルフォイ女体化が大流行している</li></ul><section class="social-embed" data-x-post="2105348196683943972"><div class="x-post-view"></div><p class="x-post-status" role="status">Xのポストを読み込んでいます…</p><button type="button" class="x-post-retry" hidden>再読み込み</button><noscript>埋め込み表示にはJavaScriptが必要です。</noscript></section><ul class="diary-list"><li>100分de名著が200円セール中（10月末まで）。これは破格。まあ受信料を毎月払ってるんだから本来これくらいの値段で提供してくれよという気持ちも若干ありますが…。</li></ul><section class="social-embed" data-x-post="2104711501663670573"><div class="x-post-view"></div><p class="x-post-status" role="status">Xのポストを読み込んでいます…</p><button type="button" class="x-post-retry" hidden>再読み込み</button><noscript>埋め込み表示にはJavaScriptが必要です。</noscript></section><ul class="diary-list"><li>９月の東京は毎日雨で、過去最高の連続降雨記録を更新したらしい。でも今日は晴れ。</li></ul><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-09-28_21-35-01/index.html" rel="prev">← 前の日記</a><a href="../2026-10-03_01-25-48/index.html" rel="next">次の日記 →</a></nav><a class="back" href="../../index.html">← 日記一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / @yuemichitaka <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before{animation:none!important;transition:none!important}}</style></head><body><div class="texture-overlay" aria-hidden="true"></div><header class="site"><div class="brand-block"><a class="brand" href="../../index.html">AMICA! v2</a></div></header><main><article><time>2026-10-03</time><h1>マンガ置き場＆管理用ツール制作中</h1><figure><img src="../../photos/bdd74a7f-eab0-4123-9fa1-9d5069a8c946.jpg" alt="制作中のマンガサイト"><figcaption class="photo-caption">制作中のマンガサイト</figcaption></figure><p>マンガを置くためのサイトを制作中。デザインはシンプルですが、既に結構気に入ってます。
+日記サイトと同じく、管理用のアプリを作ってあり、それで原稿データを登録し書き出しボタンを押せばサイトデータが書き出される、という仕組み。</p><p>前の記事で書いたPNGのパレット化機能もこのローカルアプリに組み込んであり、原稿データを登録すると自動でパレット化（軽量化）されます。便利。</p><hr class="diary-rule dotted"><figure class="video-embed"><iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/xze3j6G5V2c" title="YouTube動画" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></figure><p>最近良く見ているVtuber。名前とデザインが面白く、声のテンションともあってます。雑談枠は「感情学習ラジオ」。BLAME!が好きらしく、時々言及されれます。珍しい。</p><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-10-01_21-04-07/index.html" rel="prev">← 前の日記</a><span></span></nav><a class="back" href="../../index.html">← 日記一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / @yuemichitaka <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
   'use strict';
   const button = document.getElementById('rss-copy');
   if (!button) return;
@@ -158,68 +157,4 @@ footer{position:relative;z-index:10;padding:80px 32px;border-top:1px solid var(-
     audio.addEventListener('error', () => { status.textContent = '音声を読み込めません。音声ファイルのリンクから開いてください。'; update(); });
     update();
   });
-}());</script><script>(function () {
-  'use strict';
-  const cards = Array.from(document.querySelectorAll('[data-x-post]'));
-  if (!cards.length) return;
-  let apiPromise;
-  function api() {
-    if (window.twttr && window.twttr.widgets) return Promise.resolve(window.twttr);
-    if (apiPromise) return apiPromise;
-    apiPromise = new Promise(function (resolve, reject) {
-      const script = document.createElement('script');
-      let finished = false;
-      const timer = setTimeout(function () { finish(new Error('timeout')); }, 20000);
-      function finish(error) {
-        if (finished) return;
-        finished = true; clearTimeout(timer);
-        if (error) { script.remove(); apiPromise = null; reject(error); }
-        else resolve(window.twttr);
-      }
-      script.src = 'https://platform.twitter.com/widgets.js';
-      script.async = true;
-      script.onerror = function () { finish(new Error('network')); };
-      script.onload = function () {
-        if (window.twttr && window.twttr.widgets) finish();
-        else if (window.twttr && window.twttr.ready) window.twttr.ready(function () { finish(); });
-        else finish(new Error('unavailable'));
-      };
-      document.head.appendChild(script);
-    });
-    return apiPromise;
-  }
-  function show(card) {
-    const host = card.querySelector('.x-post-view');
-    const message = card.querySelector('.x-post-status');
-    const retry = card.querySelector('.x-post-retry');
-    const generation = String(Number(card.dataset.generation || 0) + 1);
-    card.dataset.generation = generation;
-    const current = function () { return card.dataset.generation === generation; };
-    const mount = document.createElement('div');
-    host.replaceChildren(mount);
-    message.hidden = false;
-    message.textContent = 'Xのポストを読み込んでいます…';
-    retry.hidden = true;
-    function failed() {
-      if (!current()) return;
-      message.textContent = 'Xのポストを読み込めませんでした。再読み込みしてください。';
-      retry.hidden = false;
-    }
-    const timer = setTimeout(failed, 25000);
-    api().then(function (twttr) {
-      if (!current()) return;
-      return twttr.widgets.createTweet(card.dataset.xPost, mount, {
-        theme: 'dark', dnt: true, conversation: 'none', lang: 'ja', width: 550, align: 'center'
-      });
-    }).then(function (element) {
-      clearTimeout(timer);
-      if (!current()) return;
-      if (element) { message.hidden = true; retry.hidden = true; }
-      else failed();
-    }).catch(function () { clearTimeout(timer); failed(); });
-  }
-  cards.forEach(function (card) {
-    card.querySelector('.x-post-retry').addEventListener('click', function () { show(card); });
-    show(card);
-  });
-})();</script></body></html>
+}());</script></body></html>
