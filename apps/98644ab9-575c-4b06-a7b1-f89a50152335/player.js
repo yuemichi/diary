@@ -5,7 +5,7 @@ const stage=document.querySelector('.stage'),scene=document.querySelector('.scen
 const play=document.querySelector('.play'),seek=document.querySelector('.seek'),clock=document.querySelector('.clock');
 let frames=null,raf=0,visible=true,ended=false,showWaveform=d.includeWaveform!==false&&d.showWaveform!==false;
 const waveButton=document.querySelector('.wave-toggle');
-const zero=new Float32Array(128),tau=Math.PI*2,w=900,h=506.25;
+const zero=new Float32Array(128),tau=Math.PI*2,w=900,h=d.aspect==='square'?900:506.25;
 const clamp=x=>Math.max(-1,Math.min(1,x));
 function initWaves(){if(d.includeWaveform===false||frames)return;const raw=atob(window.LINER_WAVES||''),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);frames=new DataView(bytes.buffer);}
 function wave(time){if(!frames||time<0||time>=d.duration)return zero;const n=frames.byteLength/256;if(!n)return zero;const p=time*30,i=Math.min(Math.floor(p),n-1),j=Math.min(i+1,n-1),m=p-Math.floor(p),a=new Float32Array(128);for(let k=0;k<128;k++)a[k]=((1-m)*frames.getInt16((i*128+k)*2,true)+m*frames.getInt16((j*128+k)*2,true))/32767;return a;}
