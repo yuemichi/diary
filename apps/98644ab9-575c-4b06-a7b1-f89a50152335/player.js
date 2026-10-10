@@ -65,7 +65,6 @@ document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(raf);raf=
 new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible){cancelAnimationFrame(raf);raf=0;}else start();}).observe(stage);
 function resize(){const scale=stage.clientWidth/w;scene.style.transform='scale('+scale+')';const ratio=Math.min(devicePixelRatio||1,2);c.width=Math.round(stage.clientWidth*ratio);c.height=Math.round(stage.clientWidth*ratio*h/w);ctx.setTransform(c.width/w,0,0,c.height/h,0,0);draw();}
 new ResizeObserver(resize).observe(stage);
-const grain=document.querySelector('.grain'),gc=grain.getContext('2d');grain.width=256;grain.height=256;let seed=19537;const noise=gc.createImageData(256,256);for(let i=0;i<noise.data.length;i+=4){seed=(Math.imul(seed,1664525)+1013904223)>>>0;noise.data[i]=noise.data[i+1]=noise.data[i+2]=seed>>>24;noise.data[i+3]=255;}gc.putImageData(noise,0,0);
 document.querySelector('.title').textContent=d.title;document.querySelector('.date').textContent=d.date;document.querySelector('.date').style.top=d.title.trim()?'60px':'24px';document.querySelector('.author').textContent=d.author;
 document.documentElement.style.setProperty('--accent',d.accent);scene.style.backgroundColor=d.background;scene.style.color=d.accent;lyrics.style.color=d.lyricColor;lyrics.style.fontSize=d.lyricSize+'px';document.querySelector('.author').style.color=d.line;
 audio.src=d.audio;resize();
