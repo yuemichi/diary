@@ -33,7 +33,8 @@ main{position:relative;z-index:10;max-width:896px;margin:0 auto;padding:40px 32p
 .section-tabs a[aria-current="page"]{color:var(--light);border-bottom-color:var(--light)}
 .section-tabs a:focus-visible{outline:2px solid var(--light);outline-offset:6px}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
-.fragment-item{margin:0 auto;padding:16px 0;border-bottom:1px solid var(--line)}
+.fragment-item{margin:0 auto;padding:16px 0;border-bottom:1px solid var(--line);scroll-margin-top:24px}
+.fragment-item.is-target{outline:1px solid var(--light);outline-offset:6px}
 .fragment-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:2}
 .fragment-tags{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
 .fragment-tags a,.fragment-tags button{font:inherit;font-size:12px;color:var(--muted);background:transparent;border:0;border-bottom:1px solid transparent;padding:2px 0;cursor:pointer;overflow-wrap:anywhere;max-width:100%}
@@ -188,7 +189,7 @@ figcaption.photo-caption{font-size:14.0px}.text-link time{font-size:12.0px}
 ただ、この写真を見た時に「そういえばあれ綺麗だったなー」と思い出すことが出来ます。
 色合いが凄く鮮やかで、かつ雲のスケール感も「巨大なものがすぐ近くにある」という感じで凄かった。</p><p>写真とはそういうもので、その写真の本当の価値を知るのは撮った人だけ、みたいなところがあります。</p><hr class="diary-rule dotted"><p>もっと「記録」に向き合いたいという気持ちが最近増している。
 写真、スクリーンショット、音声、ニュース…。
-記録としてのデータ。断片的時間のfootprintとしてのデータ。</p><p>データに向き合う時、漫然と消費するのではなく、そこにある記録性みたいなものに向き合いたい。</p><hr class="diary-rule dotted"><p>最近のニュース</p><ul class="diary-list"><li>PHPにヤバい脆弱性が見つかったとかで、多くのサービスがメンテナンス状態に入った。</li></ul><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-10-17_23-06-56/index.html" rel="prev">← 前の日記</a><a href="../2026-10-23_16-23-32/index.html" rel="next">次の日記 →</a></nav><a class="back" href="../../index.html">← DIARY一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / @yuemichitaka <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
+記録としてのデータ。断片的時間のfootprintとしてのデータ。</p><p>データに向き合う時、漫然と消費するのではなく、そこにある記録性みたいなものに向き合いたい。</p><hr class="diary-rule dotted"><p>最近のニュース</p><ul class="diary-list"><li>PHPにヤバい脆弱性が見つかったとかで、多くのサービスがメンテナンス状態に入った。</li></ul><nav class="entry-navigation" aria-label="前後の日記"><a href="../2026-10-17_23-06-56/index.html" rel="prev">← 前の日記</a><a href="../2026-10-23_16-23-32/index.html" rel="next">次の日記 →</a></nav><a class="back" href="../../index.html">← DIARY一覧</a></article></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / <a class="footer-author" href="https://x.com/yuemichitaka">@yuemichitaka</a> <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
   'use strict';
   const button = document.getElementById('rss-copy');
   if (!button) return;
