@@ -11,7 +11,7 @@ header.site{position:relative;z-index:10;display:flex;justify-content:space-betw
 .site-nav{font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted)}
 .site-nav:hover{color:var(--light)}
 main{position:relative;z-index:10;max-width:896px;margin:0 auto;padding:40px 32px 96px}
-.diary-photo{display:block;max-width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}
+.diary-photo{display:block;max-width:100%;margin:0 auto;padding:0;border:0;background:transparent;cursor:zoom-in}
 .diary-photo:focus-visible{outline:2px solid var(--light);outline-offset:4px}
 #diary-viewer{width:94vw;max-width:1400px;height:92vh;height:92dvh;max-height:92dvh;padding:16px;border:1px solid #39414a;border-radius:10px;background:var(--dark);color:var(--text);overflow:hidden}
 #diary-viewer::backdrop{background:rgba(0,0,0,.88)}
@@ -133,7 +133,6 @@ footer{position:relative;z-index:10;padding:80px 32px;border-top:1px solid var(-
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .rss-link{appearance:none;background:none;border:0;padding:0;font:inherit;cursor:pointer;margin-left:1.5em;color:var(--muted);letter-spacing:.12em;text-decoration:none}.rss-link:hover,.rss-link:focus-visible{color:var(--light);text-decoration:underline}
 .liner-frame{width:100%;max-width:var(--liner-width,704px);position:relative;margin:32px auto;background:#0d0f12}.liner-frame::before{content:'';display:block;padding-top:calc(var(--liner-height,56.25%) + 86px)}.liner-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.music-frame{margin:0 auto 30px}
 .links-grid{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));align-items:start;gap:28px 32px;margin:0;padding:0}
 .links-grid>li{min-width:0;margin:0;padding:0}
 .link-site{display:inline-flex;max-width:100%;flex-direction:column;align-items:flex-start;gap:8px}
@@ -158,22 +157,49 @@ footer{position:relative;z-index:10;padding:80px 32px;border-top:1px solid var(-
 .app-card:hover .app-thumb{filter:brightness(1.12)}
 @media(max-width:760px){.apps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.apps-grid{grid-template-columns:minmax(0,1fr);gap:28px}.app-name{font-size:16px}}
+main.manga-main{max-width:max(896px,calc(var(--manga-width) + 64px))}
+.manga-main>.section-tabs{max-width:832px;margin-left:auto;margin-right:auto}
+article.manga-reader{max-width:var(--manga-width,704px)}
+.manga-reader-heading{margin:0 0 28px}
+.manga-return{display:inline-block;color:var(--muted);font-size:13px;letter-spacing:.04em}
+.manga-return:hover{color:var(--light)}
+article.manga-reader h1{margin:12px 0 8px;overflow-wrap:anywhere}
+article.manga-reader .manga-reader-series{margin:20px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
+article.manga-reader .manga-reader-meta{margin:0;font-size:12px;color:var(--muted);letter-spacing:.04em}
+.manga-page{position:relative;width:100%;max-width:100%;margin:0 auto;overflow:hidden}
+.manga-page img{display:block;width:100%;height:auto;margin:0}
+.manga-retry{position:absolute;inset:0;width:100%;height:100%;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.manga-return-bottom{margin-top:32px}
+.manga-notice{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.8;letter-spacing:.04em;overflow-wrap:anywhere}
+.manga-group{display:grid;grid-template-columns:minmax(7.5em,28%) minmax(0,1fr);align-items:baseline;gap:4px 18px;padding:15px 0;border-bottom:1px solid var(--line)}
+.manga-group:last-child{border-bottom:0}
+.manga-group h2{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:19px;font-weight:600;line-height:1.55;letter-spacing:.045em;margin:0;overflow-wrap:anywhere}
+.manga-links{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;list-style:none;margin:0;padding:0;min-width:0}
+.manga-links li{max-width:100%}
+.manga-links a{display:inline-block;padding:3px 0;color:var(--text);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;overflow-wrap:anywhere}
+.manga-links a:hover,.manga-links a:focus-visible{color:var(--light)}
+.manga-episodes a{font:14px/1.6 ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:center}
+.manga-singles{column-gap:1.4em}
+@media(max-width:540px){.manga-group{grid-template-columns:1fr;padding:12px 0}.manga-group h2{font-size:17px}}
+@media(pointer:coarse){.manga-links a{min-height:44px;padding:10px 0}.manga-episodes a{min-width:44px}}
 .music-list{list-style:none;margin:0;padding:0}
 h2.year.music-year{margin:32px 0 4px}
-.music-track{display:flex;align-items:center;gap:14px;padding-right:6px;border-bottom:1px solid var(--line)}
-.music-select{display:grid;grid-template-columns:46px 20px minmax(0,1fr);gap:14px;align-items:center;flex:1;min-width:0;padding:17px 0}
+.music-track{border-bottom:1px solid var(--line)}
+.music-select{display:grid;grid-template-columns:46px minmax(0,1fr) auto 16px;gap:14px;align-items:center;padding:12px 2px;scroll-margin-top:12px}
 .music-cover{display:block;width:46px;height:46px;background:#17262b;position:relative;overflow:hidden}
 .music-cover img{width:100%;height:100%;object-fit:cover}
 .music-cover-lines{position:absolute;top:18px;left:8px;right:8px;height:1px;background:#69a5a1;box-shadow:5px 6px 0 #69a5a1,-4px 12px 0 #69a5a1;opacity:.7}
 .music-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
 .music-title{font-size:16px;letter-spacing:.055em;font-weight:400;overflow-wrap:anywhere}
-.music-copy time{font-size:11px;letter-spacing:.12em}
-.music-indicator{font-size:11px;text-align:center;color:var(--muted)}
-.music-select[aria-current="true"] .music-title,.music-select[aria-current="true"] .music-indicator,.music-select:hover .music-title{color:var(--light)}
-.music-duration{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.06em}
-.music-diary{padding:12px 0 12px 8px;font-size:11px;letter-spacing:.08em;color:var(--muted);white-space:nowrap}
-.music-diary:hover{color:var(--light);text-decoration:underline}
-@media(max-width:540px){.music-track{gap:12px}.music-select{grid-template-columns:40px minmax(0,1fr);gap:12px;padding:15px 0}.music-cover{width:40px;height:40px}.music-indicator,.music-duration{display:none}.music-title{font-size:14px}}
+.music-copy time,.music-duration{color:var(--muted);font-size:11px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.music-chevron{justify-self:center;width:8px;height:8px;border:solid var(--muted);border-width:0 1px 1px 0;transform:rotate(45deg)}
+.music-select[aria-expanded="true"] .music-chevron{transform:rotate(225deg);border-color:var(--light)}
+.music-select[aria-expanded="true"] .music-title,.music-select:hover .music-title{color:var(--light)}
+.music-panel{margin:0 2px 10px 62px;max-width:var(--liner-width)}
+.music-frame{margin:0}
+.music-diary{display:block;width:fit-content;margin-left:auto;padding:12px 2px;font-size:12px;letter-spacing:.08em;color:var(--muted)}
+.music-diary:hover,.music-diary:focus-visible{color:var(--light);text-decoration:underline}
+@media(max-width:540px){.music-select{grid-template-columns:40px minmax(0,1fr) auto 14px;gap:10px;padding:10px 0}.music-cover{width:40px;height:40px}.music-title{font-size:14px}.music-panel{margin-left:0;margin-right:0}}
 .file-download{display:flex;flex-direction:column;gap:6px;margin:28px 0;padding:16px 20px;border:1px solid var(--line);border-radius:8px;background:#151b20;overflow-wrap:anywhere}.file-download-title{color:var(--light)}.file-download-info{font-size:12px;color:var(--muted)}.file-download:hover{border-color:var(--light)}
 .local-audio{margin:32px 0;padding:18px 20px;background:#151b20;border:1px solid #28363b;border-radius:10px}.audio-heading{display:flex;justify-content:space-between;gap:12px;font-size:13px}.audio-heading span:last-child{color:var(--muted);white-space:nowrap}.audio-controls{display:flex;align-items:center;gap:14px;margin-top:14px}.audio-controls[hidden]{display:none}.audio-toggle{background:var(--light);color:#0d0f12;border:0;border-radius:50%;width:38px;height:38px;flex-shrink:0;cursor:pointer}.audio-time{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.audio-seek{min-width:0;flex:1;accent-color:var(--light)}.audio-status{font-size:12px;margin:6px 0}.audio-status:empty{display:none}.audio-download{font-size:11px;color:var(--muted)}.local-audio audio{max-width:100%}
 .audio-embed{margin:32px 0}.audio-embed iframe{display:block;width:100%;border:0;border-radius:8px}.audio-embed figcaption{margin-top:10px;font-size:12px}
@@ -185,10 +211,15 @@ body{font-size:16.0px}.brand{font-size:36.0px}
 article h2{font-size:24.0px}time{font-size:14.0px}.row time{font-size:12.0px}
 figcaption.photo-caption{font-size:14.0px}.text-link time{font-size:12.0px}
 .row:hover,.row:focus-visible{color:var(--hover-color,var(--light))}
-@media(max-width:767px){.brand{font-size:32.0px}.entry-title{font-size:20.0px}article h1{font-size:26.0px}}</style></head><body><header class="site"><div class="brand-block"><a class="brand" href="index.html">AMICA! v2</a></div></header><main><nav class="section-tabs" aria-label="サイトのページ"><a href="index.html">DIARY</a><a href="gallery.html">IMAGES</a><a href="fragments/index.html">FRAGMENTS</a><a href="links.html">LINKS</a><a href="https://yuemichi.github.io/manga/" target="_blank" rel="noopener noreferrer" aria-label="MANGA（別タブで開く）">MANGA <span aria-hidden="true">↗</span></a></nav><h1 class="visually-hidden">MUSIC</h1>
-<div id="music-player-box" class="liner-frame music-frame" style="--liner-width:704px;--liner-height:56.25%"><iframe id="music-player" name="music-player" src="apps/98644ab9-575c-4b06-a7b1-f89a50152335/index.html" title="適当ドラム打ち込み — LINER PLAYER" allow="fullscreen" allowfullscreen></iframe></div>
-<p id="music-selection" class="visually-hidden" role="status"></p>
-<noscript><p>曲名からプレイヤーを切り替えられます。表示サイズの調整にはJavaScriptが必要です。</p></noscript><h2 class="year music-year">2026</h2><ol class="music-list"><li class="music-track"><a class="music-select" href="apps/98644ab9-575c-4b06-a7b1-f89a50152335/index.html" target="music-player" data-music-id="98644ab9-575c-4b06-a7b1-f89a50152335" data-title="適当ドラム打ち込み" data-width="704" data-ratio="56.25%" aria-current="true"><span class="music-cover"><img src="music-covers/98644ab9-575c-4b06-a7b1-f89a50152335.png" alt="" loading="lazy" decoding="async" width="46" height="46"></span><span class="music-indicator" data-number="01" aria-hidden="true">▶</span><span class="music-copy"><span class="music-title">適当ドラム打ち込み</span><time datetime="2026-10-09">2026-10-09</time></span></a><span class="music-duration">0:21</span><a class="music-diary" href="entries/2026-10-09_01-36-48/index.html" aria-label="適当ドラム打ち込みを掲載した日記へ">日記へ →</a></li></ol></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / <a class="footer-author" href="https://x.com/yuemichitaka">@yuemichitaka</a> <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
+@media(max-width:767px){.brand{font-size:32.0px}.entry-title{font-size:20.0px}article h1{font-size:26.0px}}</style></head><body><header class="site"><div class="brand-block"><a class="brand" href="index.html">AMICA! v2</a></div></header><main><nav class="section-tabs" aria-label="サイトのページ"><a href="index.html">DIARY</a><a href="gallery.html">IMAGES</a><a href="fragments/index.html">FRAGMENTS</a><a href="links.html">LINKS</a><a href="manga.html">MANGA</a></nav><h1 class="visually-hidden">MUSIC</h1>
+<div id="music-archive"><p id="music-selection" class="visually-hidden" role="status"></p>
+<noscript><p>曲名を選ぶと一覧先頭のプレイヤーが切り替わります。再生にはJavaScriptを有効にしてください。</p></noscript><h2 class="year music-year">2026</h2><ol class="music-list"><li class="music-track">
+  <a class="music-select" href="apps/98644ab9-575c-4b06-a7b1-f89a50152335/index.html" target="music-player" data-music-id="98644ab9-575c-4b06-a7b1-f89a50152335" data-title="適当ドラム打ち込み" data-width="704" data-ratio="56.25%" data-article="entries/2026-10-09_01-36-48/index.html" aria-expanded="true" aria-controls="music-player-panel"><span class="music-cover"><img src="music-covers/98644ab9-575c-4b06-a7b1-f89a50152335.png" alt="" loading="lazy" decoding="async" width="46" height="46"></span><span class="music-copy"><span class="music-title">適当ドラム打ち込み</span><time datetime="2026-10-09">2026-10-09</time></span><span class="music-duration">0:21</span><span class="music-chevron" aria-hidden="true"></span></a>
+  <div id="music-player-panel" class="music-panel" style="--liner-width:704px;--liner-height:56.25%">
+  <div class="liner-frame music-frame"><iframe name="music-player" src="apps/98644ab9-575c-4b06-a7b1-f89a50152335/index.html" title="適当ドラム打ち込み — LINER PLAYER" allow="fullscreen" allowfullscreen></iframe></div>
+  <a class="music-diary" href="entries/2026-10-09_01-36-48/index.html" aria-label="適当ドラム打ち込みを掲載した日記へ">日記へ →</a>
+</div>
+</li></ol></div></main><footer><div class="footer-inner">&copy; 2026 AMICA! v2 / <a class="footer-author" href="https://x.com/yuemichitaka">@yuemichitaka</a> <button type="button" id="rss-copy" class="rss-link" data-feed-url="https://yuemichi.github.io/diary/feed.xml" title="RSSのURLをコピー" aria-label="RSSのURLをコピー">RSS</button><span id="rss-copy-status" class="rss-status" role="status"></span><noscript>RSSのURL：https://yuemichi.github.io/diary/feed.xml</noscript></div></footer><script>(function () {
   'use strict';
   const button = document.getElementById('rss-copy');
   if (!button) return;
