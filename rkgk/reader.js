@@ -11,6 +11,44 @@
   }
   publicLinks(list);
   if (!older) return;
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => { script.remove(); resolve(); };
+      script.onerror = () => { script.remove(); reject(new Error('batch')); };
+      document.head.append(script);
+    });
+  }
+  function plainClick(event) {
+    return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+  }
+  if (list.hasAttribute('data-tag-list')) {
+    let loading = false;
+    older.addEventListener('click', async event => {
+      if (!plainClick(event)) return;
+      event.preventDefault();
+      if (loading || older.hidden) return;
+      loading = true;
+      const destination = older.href;
+      try {
+        window.amicaComicBatch = null;
+        await loadScript(destination.replace(/\.html$/, '.js'));
+        const batch = window.amicaComicBatch;
+        if (!batch || typeof batch.html !== 'string') throw new Error('batch');
+        const template = document.createElement('template');
+        template.innerHTML = batch.html;
+        publicLinks(template.content);
+        const heading = template.content.querySelector('.comic-day>h2');
+        list.append(template.content);
+        if (batch.next) older.setAttribute('href', batch.next);
+        else older.hidden = true;
+        heading?.focus({preventScroll:true});
+      } catch (_) { window.location.assign(destination); }
+      finally { window.amicaComicBatch = null; loading = false; }
+    });
+    return;
+  }
   const days = list.dataset.remaining.split(' ').filter(Boolean);
   const cache = window.amicaComicMonths = Object.create(null);
   let position = 0, busy = false;
@@ -19,13 +57,7 @@
     if (local) return local.content.cloneNode(true);
     const month = date.slice(0, 7);
     if (!cache[month]) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = month + '.js';
-        script.onload = () => { script.remove(); resolve(); };
-        script.onerror = () => { script.remove(); reject(new Error('month')); };
-        document.head.append(script);
-      });
+      await loadScript(month + '.js');
     }
     if (!cache[month] || typeof cache[month][date] !== 'string') throw new Error('day');
     const template = document.createElement('template');
@@ -53,7 +85,7 @@
     finally { busy = false; }
   }
   older.addEventListener('click', event => {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!plainClick(event)) return;
     event.preventDefault();
     appendTo(position + 3, true);
   });
