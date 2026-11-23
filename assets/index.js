@@ -10,11 +10,30 @@
   const next = document.getElementById('index-next');
   const pageLabel = document.getElementById('index-page');
   const pageSize = 200;
+  const tagList = document.getElementById('diary-tags');
+  const rowTags = row => Array.isArray(row.tags) ? row.tags.filter(tag => typeof tag === 'string') : [];
+  const counts = new Map();
+  catalog.forEach(row => new Set(rowTags(row)).forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1)));
+  let selectedTag = new URL(window.location.href).searchParams.get('tag') || '';
+  const tagButtons = new Map();
+  function addTagButton(tag, label) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = label;
+    button.addEventListener('click', () => { selectedTag = tag; schedule(); });
+    tagList.appendChild(button); tagButtons.set(tag, button);
+  }
+  addTagButton('', 'すべて');
+  Array.from(counts.keys()).sort((a,b) => a.localeCompare(b, 'ja')).forEach(tag => addTagButton(tag, `${tag} (${counts.get(tag)})`));
+  const acceptsTag = row => !selectedTag || rowTags(row).includes(selectedTag);
   let matches = catalog, page = 0, epoch = 0, timer, composing = false;
   let loading = false;
   const normalize = value => value.normalize('NFKC').toLocaleLowerCase('ja');
   function element(tag, className, text) { const node = document.createElement(tag); node.className = className; if (text !== undefined) node.textContent = text; return node; }
   function render() {
+    tagButtons.forEach((button, tag) => button.setAttribute('aria-pressed', String(tag === selectedTag)));
+    const url = new URL(window.location.href);
+    if (selectedTag) url.searchParams.set('tag', selectedTag); else url.searchParams.delete('tag');
+    try { window.history.replaceState(null, '', url); } catch (_) { /* file:// */ }
     const sorted = order.value === 'oldest' ? matches.slice().reverse() : matches;
     const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
     page = Math.min(page, pages - 1);
@@ -28,11 +47,11 @@
       const name = element('span', 'entry-name'); name.appendChild(element('span', 'entry-title', row.title));
       anchor.append(time, name); item.appendChild(anchor); fragment.appendChild(item);
     });
-    if (!sorted.length) fragment.appendChild(element('p', '', search.value.trim() ? '一致する日記はありません。' : 'まだ公開された日記はありません。'));
+    if (!sorted.length) fragment.appendChild(element('p', '', (search.value.trim() || selectedTag) ? '一致する日記はありません。' : 'まだ公開された日記はありません。'));
     list.replaceChildren(fragment);
     previous.disabled = page === 0 || loading; next.disabled = page >= pages - 1 || loading;
     pageLabel.textContent = `${page + 1} / ${pages}`;
-    if (!loading) status.textContent = search.value.trim() ? `${matches.length}件が見つかりました（全${catalog.length}件）` : `全${catalog.length}件`;
+    if (!loading) status.textContent = (search.value.trim() || selectedTag) ? `${matches.length}件が見つかりました（全${catalog.length}件）` : `全${catalog.length}件`;
   }
   // Serialize classic script loads so even a replaced query cannot mix chunks.
   let queue = Promise.resolve();
@@ -55,7 +74,7 @@
   }
   async function filter(ticket) {
     const terms = normalize(search.value.trim()).split(/\s+/).filter(Boolean);
-    if (!terms.length) { matches = catalog; loading = false; page = 0; render(); return; }
+    if (!terms.length) { matches = catalog.filter(acceptsTag); loading = false; page = 0; render(); return; }
     loading = true; list.setAttribute('aria-busy', 'true'); previous.disabled = next.disabled = true;
     status.textContent = '本文を検索しています…';
     const ids = new Set();
@@ -68,7 +87,8 @@
         status.textContent = `検索中… ${number + 1} / ${window.AmicaSearchChunkCount}`;
         await new Promise(resolve => setTimeout(resolve, 0));
       }
-      matches = catalog.filter(row => ids.has(row.id)); page = 0; loading = false; render();
+      if (ticket !== epoch) return;
+      matches = catalog.filter(row => ids.has(row.id) && acceptsTag(row)); page = 0; loading = false; render();
     } catch (_) {
       if (ticket !== epoch) return;
       loading = false; matches = []; list.replaceChildren(); previous.disabled = next.disabled = true; pageLabel.textContent = '—';
@@ -83,7 +103,7 @@
   search.addEventListener('compositionstart', () => { composing = true; clearTimeout(timer); ++epoch; });
   search.addEventListener('compositionend', () => { composing = false; schedule(); });
   search.addEventListener('input', () => { if (!composing) schedule(); });
-  document.getElementById('index-clear').addEventListener('click', () => { search.value = ''; composing = false; schedule(); search.focus(); });
+  document.getElementById('index-clear').addEventListener('click', () => { search.value = ''; selectedTag = ''; composing = false; schedule(); search.focus(); });
   order.addEventListener('change', () => { page = 0; render(); });
   previous.addEventListener('click', () => { if (!loading && page > 0) { page--; render(); list.scrollIntoView({block:'start'}); } });
   next.addEventListener('click', () => { if (!loading && (page + 1) * pageSize < matches.length) { page++; render(); list.scrollIntoView({block:'start'}); } });
@@ -96,5 +116,6 @@
   });
   document.getElementById('index-controls').hidden = false;
   document.getElementById('index-pagination').hidden = false;
-  render();
+  tagList.hidden = counts.size === 0;
+  filter(++epoch);
 })();

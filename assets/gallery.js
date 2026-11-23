@@ -4,12 +4,16 @@ const dialog=document.getElementById('photo-viewer');
 const image=document.getElementById('full-photo');
 const caption=document.getElementById('photo-caption');
 const article=document.getElementById('photo-article');
+const date=document.getElementById('photo-date');
 const status=document.getElementById('photo-status');
 let opener;
 for(const button of document.querySelectorAll('.photo-tile')){
  button.addEventListener('click',()=>{
   opener=button;caption.textContent=button.dataset.caption;
   article.href=button.dataset.entry;status.textContent='読み込み中…';
+  const day=button.dataset.date||'';
+  date.textContent=day;date.hidden=!day;
+  if(day)date.setAttribute('datetime',day);else date.removeAttribute('datetime');
   image.alt=button.dataset.caption||'日記の写真';
   image.src=button.dataset.full;
   dialog.showModal();
